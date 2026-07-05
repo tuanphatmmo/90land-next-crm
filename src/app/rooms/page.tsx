@@ -63,6 +63,8 @@ export default function RoomsPage() {
 
   // Image viewer
   const [viewRoomImage, setViewRoomImage] = useState<any>(null);
+  // Room detail modal
+  const [viewRoomDetail, setViewRoomDetail] = useState<any>(null);
   // Modals
   const [showAddBuilding, setShowAddBuilding] = useState(false);
   const [showAddRoom, setShowAddRoom] = useState(false);
@@ -301,7 +303,10 @@ export default function RoomsPage() {
     return (
       <div className="flex flex-col gap-1 p-3 rounded-xl border border-slate-100 hover:border-amber-200 hover:bg-amber-50/30 transition-all group">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div
+            className="flex items-center gap-3 flex-1 cursor-pointer"
+            onClick={() => setViewRoomDetail(room)}
+          >
             <div className="w-9 h-9 bg-slate-100 rounded-lg flex items-center justify-center text-xs font-bold text-slate-600 shrink-0">
               {room.room_num}
             </div>
@@ -314,13 +319,21 @@ export default function RoomsPage() {
             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${statusColor}`}>{room.status}</span>
             <div className="text-sm font-bold text-[#1A2350]">{room.price ? (room.price / 1000000).toFixed(1) + 'tr' : '---'}</div>
             <div className="flex gap-1">
-              {/* Xem ảnh - luôn hiện */}
+              {/* Xem chi tiết */}
+              <button
+                onClick={() => setViewRoomDetail(room)}
+                className="p-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg transition-colors"
+                title="Xem chi tiết phòng"
+              >
+                <Eye className="w-3.5 h-3.5" />
+              </button>
+              {/* Xem ảnh */}
               <button
                 onClick={() => setViewRoomImage(room)}
                 className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-lg transition-colors"
                 title="Xem ảnh phòng"
               >
-                <Eye className="w-3.5 h-3.5" />
+                <ImageIcon className="w-3.5 h-3.5" />
               </button>
               {/* Sửa/Xóa - chỉ admin */}
               {isAdmin && (
@@ -614,6 +627,95 @@ export default function RoomsPage() {
             </button>
           </div>
         </Modal>
+      )}
+
+      {/* ─── MODAL: CHI TIẾT PHÒNG ─── */}
+      {viewRoomDetail && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200 overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-[#1A2350] to-[#2d3a7c] text-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-base font-extrabold">
+                  {viewRoomDetail.room_num}
+                </div>
+                <div>
+                  <div className="text-base font-bold">Phòng {viewRoomDetail.room_num}</div>
+                  <div className="text-xs text-white/70">{selectedBuilding?.code} · {selectedBuilding?.address}</div>
+                </div>
+              </div>
+              <button onClick={() => setViewRoomDetail(null)} className="p-1.5 hover:bg-white/20 rounded-full transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Status badge */}
+            <div className="px-5 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+              <span className={`text-sm font-bold px-3 py-1 rounded-full border ${
+                viewRoomDetail.status === 'Trống' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                viewRoomDetail.status === 'Đã cọc' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                viewRoomDetail.status === 'Sắp trống' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                'bg-red-50 text-red-700 border-red-200'
+              }`}>
+                {viewRoomDetail.status === 'Trống' ? '🟢' : viewRoomDetail.status === 'Đã cọc' ? '🟡' : viewRoomDetail.status === 'Sắp trống' ? '🟠' : '🔴'} {viewRoomDetail.status}
+              </span>
+              <div className="text-xl font-extrabold text-[#1A2350]">
+                {viewRoomDetail.price ? (viewRoomDetail.price / 1000000).toFixed(1) + ' triệu/tháng' : '---'}
+              </div>
+            </div>
+
+            {/* Detail rows */}
+            <div className="p-5 space-y-3">
+              {[
+                { icon: '🏠', label: 'Loại phòng', value: viewRoomDetail.type || 'Phòng thường' },
+                { icon: '📐', label: 'Diện tích', value: viewRoomDetail.area_m2 || '---' },
+                { icon: '🏢', label: 'Hoa hồng', value: selectedBuilding?.commission || '---' },
+                { icon: '🛋️', label: 'Nội thất', value: viewRoomDetail.furniture || 'Không có thông tin' },
+                { icon: '⚡', label: 'Dịch vụ', value: viewRoomDetail.services || 'Không có thông tin' },
+              ].map(({ icon, label, value }) => (
+                <div key={label} className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl">
+                  <span className="text-base shrink-0">{icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[11px] font-semibold text-slate-400 uppercase mb-0.5">{label}</div>
+                    <div className="text-sm font-semibold text-slate-700 break-words">{value}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Footer actions */}
+            <div className="px-5 pb-5 flex gap-3">
+              <button
+                onClick={() => { setViewRoomDetail(null); setViewRoomImage(viewRoomDetail); }}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl text-sm font-semibold transition-colors"
+              >
+                <ImageIcon className="w-4 h-4" /> Xem ảnh
+              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => {
+                    setViewRoomDetail(null);
+                    setShowEditRoom(viewRoomDetail);
+                    setEditPrice(String(viewRoomDetail.price));
+                    setEditStatus(viewRoomDetail.status);
+                    setEditType(viewRoomDetail.type || '');
+                    setEditFurniture(viewRoomDetail.furniture || '');
+                    setEditServices(viewRoomDetail.services || '');
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-sm font-semibold transition-colors"
+                >
+                  <Edit2 className="w-4 h-4" /> Chỉnh sửa
+                </button>
+              )}
+              <button
+                onClick={() => setViewRoomDetail(null)}
+                className="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ─── MODAL: SỬA TÒA NHÀ ─── */}
