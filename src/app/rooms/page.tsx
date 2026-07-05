@@ -59,6 +59,10 @@ export default function RoomsPage() {
   const [filterArea, setFilterArea] = useState("");
   const [filterPrice, setFilterPrice] = useState("");
 
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [showBulkEditHH, setShowBulkEditHH] = useState(false);
+  const [bulkHHValue, setBulkHHValue] = useState("50%");
+
   const isAdmin = currentUser?.role === 'admin';
 
   // Image viewer
@@ -177,6 +181,27 @@ export default function RoomsPage() {
     } catch { alert('Lỗi xóa tòa nhà!'); }
   };
 
+  const handleBulkEditHH = async () => {
+    if (!selectedIds.length) return;
+    try {
+      await axios.put(`${API_URL}/buildings/bulk-update`, { ids: selectedIds, updateData: { commission: bulkHHValue } });
+      setBuildings(buildings.map(b => selectedIds.includes(b.id) ? { ...b, commission: bulkHHValue } : b));
+      setShowBulkEditHH(false);
+      setSelectedIds([]);
+    } catch { alert('Lỗi cập nhật đồng loạt!'); }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedIds.length) return;
+    if (!confirm(`Xóa ${selectedIds.length} tòa nhà đã chọn? Mọi phòng bên trong sẽ bị xóa vĩnh viễn!`)) return;
+    try {
+      await axios.post(`${API_URL}/buildings/bulk-delete`, { ids: selectedIds });
+      setBuildings(buildings.filter(b => !selectedIds.includes(b.id)));
+      setSelectedIds([]);
+      setSelectedBuilding(null);
+    } catch { alert('Lỗi xóa đồng loạt!'); }
+  };
+
   const handleDeleteRoom = async (room: any) => {
     if (!confirm(`Xóa phòng ${room.room_num}?`)) return;
     try {
@@ -185,6 +210,10 @@ export default function RoomsPage() {
       setSelectedBuilding(updated);
       setBuildings(buildings.map(b => b.id === updated.id ? updated : b));
     } catch { alert('Lỗi xóa phòng!'); }
+  };
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   };
 
   const handleEditRoom = async () => {
@@ -234,6 +263,16 @@ export default function RoomsPage() {
       >
         {/* Image */}
         <div className="h-40 relative overflow-hidden bg-slate-100">
+          {isAdmin && (
+            <div className="absolute top-3 left-3 z-20" onClick={(e) => e.stopPropagation()}>
+              <input 
+                type="checkbox" 
+                checked={selectedIds.includes(b.id)}
+                onChange={() => toggleSelect(b.id)}
+                className="w-5 h-5 rounded border-slate-300 text-amber-500 focus:ring-amber-500 cursor-pointer shadow-sm bg-white/80"
+              />
+            </div>
+          )}
           {isValidUrl(b.image_link) ? (
             <iframe
               src={b.image_link.includes('/folders/')
@@ -359,16 +398,20 @@ export default function RoomsPage() {
         </div>
         {/* Chi tiết nội thất / dịch vụ */}
         {(room.furniture || room.services) && (
-          <div className="ml-12 flex flex-wrap gap-2">
+          <div className="ml-12 flex flex-col gap-1 mt-1">
             {room.furniture && (
-              <span className="flex items-center gap-1 text-[11px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
-                🛋️ <span className="font-medium">Nội thất:</span> {room.furniture}
-              </span>
+              <div className="flex items-start gap-1 text-[11px] text-slate-600 bg-slate-100 px-2 py-1 rounded-lg">
+                <span className="shrink-0">🛋️</span>
+                <span className="font-medium shrink-0 mr-1">Nội thất:</span>
+                <span className="line-clamp-1 break-words leading-tight">{room.furniture}</span>
+              </div>
             )}
             {room.services && (
-              <span className="flex items-center gap-1 text-[11px] text-slate-600 bg-blue-50 px-2 py-0.5 rounded-full">
-                ⚡ <span className="font-medium">Dịch vụ:</span> {room.services}
-              </span>
+              <div className="flex items-start gap-1 text-[11px] text-slate-600 bg-blue-50 px-2 py-1 rounded-lg">
+                <span className="shrink-0">⚡</span>
+                <span className="font-medium shrink-0 mr-1">Dịch vụ:</span>
+                <span className="line-clamp-1 break-words leading-tight">{room.services}</span>
+              </div>
             )}
           </div>
         )}
@@ -417,18 +460,50 @@ export default function RoomsPage() {
 
         {/* Chỉ hiện Thêm Tòa khi isAdmin */}
         {isAdmin && (
-          <button
-            onClick={() => setShowAddBuilding(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm"
-          >
-            <Plus className="w-4 h-4" /> Thêm Tòa Nhà
-          </button>
+          <>
+            <button
+              onClick={() => {
+                if (selectedIds.length === filteredBuildings.length) {
+                  setSelectedIds([]);
+                } else {
+                  setSelectedIds(filteredBuildings.map(b => b.id));
+                }
+              }}
+              className="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 rounded-lg text-sm font-semibold transition-colors shadow-sm"
+            >
+              {selectedIds.length === filteredBuildings.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+            </button>
+            <button
+              onClick={() => setShowAddBuilding(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm"
+            >
+              <Plus className="w-4 h-4" /> Thêm Tòa Nhà
+            </button>
+          </>
         )}
       </div>
 
       <div className="text-xs text-slate-500 px-1">
         Hiển thị <strong>{totalRooms}</strong> phòng trống từ <strong>{filteredBuildings.filter(b => (b.Rooms?.filter((r: any) => r.status !== 'Đã thuê').length || 0) > 0).length}</strong> tòa
       </div>
+
+      {/* Bulk Actions Bar */}
+      {selectedIds.length > 0 && isAdmin && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#1A2350] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-6 z-50 animate-in slide-in-from-bottom-5">
+          <div className="text-sm font-semibold">Đã chọn {selectedIds.length} tòa</div>
+          <div className="flex gap-2">
+            <button onClick={() => setShowBulkEditHH(true)} className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-semibold transition-colors">
+              Sửa HH đồng loạt
+            </button>
+            <button onClick={handleBulkDelete} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
+              <Trash2 className="w-4 h-4" /> Xóa {selectedIds.length} tòa
+            </button>
+            <button onClick={() => setSelectedIds([])} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ─── GRID ─── */}
       {loading ? (
@@ -677,7 +752,7 @@ export default function RoomsPage() {
                   <span className="text-base shrink-0">{icon}</span>
                   <div className="flex-1 min-w-0">
                     <div className="text-[11px] font-semibold text-slate-400 uppercase mb-0.5">{label}</div>
-                    <div className="text-sm font-semibold text-slate-700 break-words">{value}</div>
+                    <div className="text-sm font-semibold text-slate-700 break-words whitespace-pre-wrap">{value}</div>
                   </div>
                 </div>
               ))}
@@ -731,6 +806,24 @@ export default function RoomsPage() {
             </button>
             <button onClick={handleEditBuilding} className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-colors">
               ✓ Lưu Thay Đổi
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ─── MODAL: SỬA ĐỒNG LOẠT HOA HỒNG ─── */}
+      {showBulkEditHH && (
+        <Modal title="Sửa Đồng Loạt Hoa Hồng" onClose={() => setShowBulkEditHH(false)}>
+          <div className="mb-4 text-sm text-slate-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
+            Bạn đang sửa thông tin Hoa Hồng cho <strong>{selectedIds.length}</strong> tòa nhà.
+          </div>
+          <InputField label="Mức Hoa Hồng Mới" value={bulkHHValue} onChange={setBulkHHValue} placeholder="VD: 50%" />
+          <div className="flex gap-3 mt-6">
+            <button onClick={() => setShowBulkEditHH(false)} className="flex-1 px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm font-semibold hover:bg-slate-50 transition-colors">
+              Hủy
+            </button>
+            <button onClick={handleBulkEditHH} className="flex-1 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-semibold transition-colors">
+              ✓ Lưu Tất Cả
             </button>
           </div>
         </Modal>
