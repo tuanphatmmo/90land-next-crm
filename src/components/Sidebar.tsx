@@ -13,6 +13,7 @@ const navItems = [
   { name: "Nhập từ Zalo", href: "/zalo", icon: PhoneCall, badge: "3", roles: ["admin"] },
   { name: "Google Sheets", href: "/sheets", icon: FileSpreadsheet, roles: ["admin"] },
   { name: "Quản lý mã tòa", href: "/buildings", icon: FileText, roles: ["admin"] },
+  { name: "Quản lý SALE", href: "/sales", icon: Users, roles: ["admin"] },
   { section: "BÁO CÁO", roles: ["admin"] },
   { name: "Góc nhìn sếp", href: "/admin", icon: Users, roles: ["admin"] },
   { name: "Cài đặt", href: "/settings", icon: Settings, roles: ["admin"] },
