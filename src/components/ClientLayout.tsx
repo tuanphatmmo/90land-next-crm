@@ -24,6 +24,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [registerName, setRegisterName] = useState("");
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -49,6 +51,22 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     }
   };
 
+  const handleRegister = async (e: any) => {
+    e.preventDefault();
+    try {
+      const res = await axios.post(`${API_URL}/register`, { 
+        username: loginUsername.trim().toLowerCase(), 
+        password: loginPassword.trim(),
+        name: registerName.trim() || loginUsername.trim()
+      });
+      alert("Đăng ký thành công! Đang tự động đăng nhập...");
+      setCurrentUser(res.data.data);
+      localStorage.setItem("crm_user", JSON.stringify(res.data.data));
+    } catch (err: any) {
+      alert(err.response?.data?.error || "Đăng ký thất bại");
+    }
+  };
+
   if (loading) return null;
 
   if (!currentUser) {
@@ -70,10 +88,21 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         {/* Card */}
         <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl w-full max-w-sm p-7">
           <div className="text-center mb-7">
-            <h1 className="text-xl font-bold text-white mb-1">Đăng nhập</h1>
+            <h1 className="text-xl font-bold text-white mb-1">{isRegistering ? "Đăng ký SALE" : "Đăng nhập"}</h1>
             <p className="text-white/40 text-xs">Hệ thống quản lý nguồn hàng 90Land</p>
           </div>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={isRegistering ? handleRegister : handleLogin} className="space-y-4">
+            {isRegistering && (
+              <div className="mb-4 animate-in fade-in slide-in-from-top-2">
+                <label className="block text-xs font-semibold text-white/50 uppercase mb-1.5">Tên hiển thị</label>
+                <input
+                  type="text" value={registerName}
+                  onChange={e => setRegisterName(e.target.value)}
+                  placeholder="Ví dụ: Nguyễn Văn A"
+                  className="w-full px-3 py-2.5 text-sm bg-white/10 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all"
+                />
+              </div>
+            )}
             <div className="mb-4">
               <label className="block text-xs font-semibold text-white/50 uppercase mb-1.5">Tài khoản</label>
               <input
@@ -94,8 +123,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             </div>
             <button type="submit"
               className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-[#0d1535] rounded-xl font-bold transition-all shadow-lg shadow-amber-500/30 mt-2 text-sm tracking-wide">
-              Đăng Nhập →
+              {isRegistering ? "Đăng Ký Tài Khoản" : "Đăng Nhập →"}
             </button>
+            <div className="text-center mt-4">
+              <button type="button" onClick={() => setIsRegistering(!isRegistering)} className="text-xs text-white/60 hover:text-white transition-colors">
+                {isRegistering ? "Đã có tài khoản? Đăng nhập ngay" : "Chưa có tài khoản? Đăng ký làm SALE"}
+              </button>
+            </div>
           </form>
         </div>
 
