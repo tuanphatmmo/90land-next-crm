@@ -282,6 +282,7 @@ export default function RoomsPage() {
                   : b.image_link}
               className="w-full h-[300px] -mt-[50px] pointer-events-none"
               style={{ border: 'none' }}
+              loading="lazy"
             />
           ) : (
             <div className="w-full h-full" style={{
