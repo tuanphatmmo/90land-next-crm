@@ -62,13 +62,19 @@ const BuildingCard = React.memo(({ b, isAdmin, isSelected, onSelect, onClick, on
       {/* Image */}
       <div className="h-40 relative overflow-hidden bg-slate-100">
         {isAdmin && (
-          <div className="absolute top-3 left-3 z-20" onClick={(e) => e.stopPropagation()}>
-            <input 
-              type="checkbox" 
-              checked={isSelected}
-              onChange={() => onSelect(b.id)}
-              className="w-5 h-5 rounded border-slate-300 text-amber-500 focus:ring-amber-500 cursor-pointer shadow-sm bg-white/80"
-            />
+          <div 
+            className="absolute top-3 left-3 z-30 flex items-center justify-center p-1.5 -m-1.5 cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(b.id);
+            }}
+          >
+            <div className={cn(
+              "w-5 h-5 rounded border transition-colors flex items-center justify-center shadow-sm",
+              isSelected ? "bg-amber-500 border-amber-500" : "bg-white/90 border-slate-300 hover:border-amber-400"
+            )}>
+              {isSelected && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+            </div>
           </div>
         )}
         {isValidUrl(b.image_link) ? (
@@ -245,6 +251,10 @@ export default function RoomsPage() {
 
   const totalRooms = useMemo(() => {
     return filteredBuildings.reduce((sum, b) => sum + (b.Rooms?.filter((r: any) => r.status !== 'Đã thuê').length || 0), 0);
+  }, [filteredBuildings]);
+
+  const totalBuildingsWithRooms = useMemo(() => {
+    return filteredBuildings.filter(b => (b.Rooms?.filter((r: any) => r.status !== 'Đã thuê').length || 0) > 0).length;
   }, [filteredBuildings]);
 
   const areas = useMemo(() => {
@@ -533,7 +543,7 @@ export default function RoomsPage() {
       </div>
 
       <div className="text-xs text-slate-500 px-1">
-        Hiển thị <strong>{totalRooms}</strong> phòng trống từ <strong>{filteredBuildings.filter(b => (b.Rooms?.filter((r: any) => r.status !== 'Đã thuê').length || 0) > 0).length}</strong> tòa
+        Hiển thị <strong>{totalRooms}</strong> phòng trống từ <strong>{totalBuildingsWithRooms}</strong> tòa
       </div>
 
       {/* Bulk Actions Bar */}
