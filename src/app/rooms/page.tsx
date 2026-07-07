@@ -1,6 +1,6 @@
 "use client";
 import { API_URL } from "@/lib/config";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Search, LayoutGrid, List, MapPin, Building, Image as ImageIcon, X, Plus, Trash2, Edit2, Eye, ExternalLink, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 import axios from "axios";
@@ -46,6 +46,97 @@ function InputField({ label, value, onChange, placeholder, type = "text" }: any)
     </div>
   );
 }
+
+/* ─── BUILDING CARD (Memoized) ─── */
+const BuildingCard = React.memo(({ b, isAdmin, isSelected, onSelect, onClick, onDelete }: any) => {
+  const availRooms = b.Rooms?.filter((r: any) => r.status !== 'Đã thuê') || [];
+  if (availRooms.length === 0) return null;
+  const minPrice = Math.min(...availRooms.map((r: any) => r.price || 0));
+  const priceStr = minPrice > 0 ? (minPrice / 1000000).toFixed(1) + 'tr' : '---';
+
+  return (
+    <div
+      onClick={() => onClick(b)}
+      className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-lg hover:border-amber-400 transition-all cursor-pointer group relative"
+    >
+      {/* Image */}
+      <div className="h-40 relative overflow-hidden bg-slate-100">
+        {isAdmin && (
+          <div className="absolute top-3 left-3 z-20" onClick={(e) => e.stopPropagation()}>
+            <input 
+              type="checkbox" 
+              checked={isSelected}
+              onChange={() => onSelect(b.id)}
+              className="w-5 h-5 rounded border-slate-300 text-amber-500 focus:ring-amber-500 cursor-pointer shadow-sm bg-white/80"
+            />
+          </div>
+        )}
+        {isValidUrl(b.image_link) ? (
+          <iframe
+            src={b.image_link.includes('/folders/')
+              ? `https://drive.google.com/embeddedfolderview?id=${b.image_link.split('/folders/')[1].split('?')[0]}#grid`
+              : b.image_link.includes('/file/d/')
+                ? `https://drive.google.com/file/d/${b.image_link.split('/file/d/')[1].split('/')[0]}/preview`
+                : b.image_link}
+            className="w-full h-[300px] -mt-[50px] pointer-events-none"
+            style={{ border: 'none' }}
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full" style={{
+            backgroundImage: `url('https://images.unsplash.com/photo-${UNSPLASH_IMAGES[b.id % UNSPLASH_IMAGES.length]}?auto=format&fit=crop&q=80&w=600&h=400')`,
+            backgroundSize: 'cover', backgroundPosition: 'center'
+          }} />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+        {/* Delete button - hover */}
+        <button
+          onClick={e => { e.stopPropagation(); onDelete(b); }}
+          className="absolute top-2 left-2 bg-red-500/90 hover:bg-red-600 text-white p-1.5 rounded-lg shadow transition-all opacity-0 group-hover:opacity-100 z-10"
+          title="Xóa tòa nhà"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+        <div className="absolute top-2 right-2 bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded-lg shadow z-10">
+          HH {b.commission || '50%'}
+        </div>
+        <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md text-white text-xs font-semibold px-2 py-1 rounded-lg flex items-center gap-1">
+          <ImageIcon className="w-3 h-3" /> {b.Rooms?.length || 0}
+        </div>
+      </div>
+
+      {/* Info */}
+      <div className="p-3.5">
+        <div className="text-sm font-extrabold text-[#1A2350] truncate">{b.code}</div>
+        <div className="flex items-center gap-1 text-xs text-slate-500 mt-1 truncate">
+          <MapPin className="w-3 h-3 text-amber-500 shrink-0" /> {b.address}
+        </div>
+        {b.area && (
+          <div className="inline-flex items-center mt-1 mb-2 px-2 py-0.5 bg-amber-50 text-amber-700 text-[10px] font-semibold rounded-full border border-amber-200">
+            Quận {b.area}
+          </div>
+        )}
+        <div className="flex flex-wrap gap-1 mb-2">
+          {b.depositOne && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[9px] font-bold rounded">Cọc: {b.depositOne}</span>}
+          {b.contractDuration && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[9px] font-bold rounded">HĐ: {b.contractDuration}</span>}
+          {b.petAllowed && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[9px] font-bold rounded">Pet: {b.petAllowed}</span>}
+        </div>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-[11px] text-slate-400">Phòng trống</div>
+            <div className="text-sm font-bold text-emerald-600">{availRooms.length} phòng</div>
+          </div>
+          <div className="text-right">
+            <div className="text-[11px] text-slate-400">Từ</div>
+            <div className="text-sm font-bold text-[#1A2350]">{priceStr}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}, (prevProps, nextProps) => {
+  return prevProps.b === nextProps.b && prevProps.isSelected === nextProps.isSelected;
+});
 
 /* ─── MAIN PAGE ─── */
 export default function RoomsPage() {
@@ -184,14 +275,14 @@ export default function RoomsPage() {
     } catch { alert('Lỗi thêm phòng!'); }
   };
 
-  const handleDeleteBuilding = async (b: any) => {
+  const handleDeleteBuilding = useCallback(async (b: any) => {
     if (!confirm(`Xóa tòa "${b.code}" sẽ xóa toàn bộ phòng bên trong! Chắc chắn?`)) return;
     try {
       await axios.delete(`${API_URL}/buildings/${b.id}`);
-      setBuildings(buildings.filter((item: any) => item.id !== b.id));
-      if (selectedBuilding?.id === b.id) setSelectedBuilding(null);
+      setBuildings(prev => prev.filter((item: any) => item.id !== b.id));
+      setSelectedBuilding((prev: any) => prev?.id === b.id ? null : prev);
     } catch { alert('Lỗi xóa tòa nhà!'); }
-  };
+  }, []);
 
   const handleBulkEditHH = async () => {
     if (!selectedIds.length) return;
@@ -235,9 +326,9 @@ export default function RoomsPage() {
     } catch { alert('Lỗi xóa phòng!'); }
   };
 
-  const toggleSelect = (id: number) => {
+  const toggleSelect = useCallback((id: number) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  };
+  }, []);
 
   const handleEditRoom = async () => {
     try {
@@ -274,92 +365,6 @@ export default function RoomsPage() {
       setShowEditBuildingModal(false);
     } catch { alert('Lỗi cập nhật tòa nhà!'); }
   };
-
-  /* ─── BUILDING CARD ─── */
-  const BuildingCard = ({ b }: { b: any }) => {
-    const availRooms = b.Rooms?.filter((r: any) => r.status !== 'Đã thuê') || [];
-    if (availRooms.length === 0) return null;
-    const minPrice = Math.min(...availRooms.map((r: any) => r.price || 0));
-    const priceStr = minPrice > 0 ? (minPrice / 1000000).toFixed(1) + 'tr' : '---';
-
-    return (
-      <div
-        onClick={() => setSelectedBuilding(b)}
-        className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-lg hover:border-amber-400 transition-all cursor-pointer group relative"
-      >
-        {/* Image */}
-        <div className="h-40 relative overflow-hidden bg-slate-100">
-          {isAdmin && (
-            <div className="absolute top-3 left-3 z-20" onClick={(e) => e.stopPropagation()}>
-              <input 
-                type="checkbox" 
-                checked={selectedIds.includes(b.id)}
-                onChange={() => toggleSelect(b.id)}
-                className="w-5 h-5 rounded border-slate-300 text-amber-500 focus:ring-amber-500 cursor-pointer shadow-sm bg-white/80"
-              />
-            </div>
-          )}
-          {isValidUrl(b.image_link) ? (
-            <iframe
-              src={b.image_link.includes('/folders/')
-                ? `https://drive.google.com/embeddedfolderview?id=${b.image_link.split('/folders/')[1].split('?')[0]}#grid`
-                : b.image_link.includes('/file/d/')
-                  ? `https://drive.google.com/file/d/${b.image_link.split('/file/d/')[1].split('/')[0]}/preview`
-                  : b.image_link}
-              className="w-full h-[300px] -mt-[50px] pointer-events-none"
-              style={{ border: 'none' }}
-              loading="lazy"
-            />
-          ) : (
-            <div className="w-full h-full" style={{
-              backgroundImage: `url('https://images.unsplash.com/photo-${UNSPLASH_IMAGES[b.id % UNSPLASH_IMAGES.length]}?auto=format&fit=crop&q=80&w=600&h=400')`,
-              backgroundSize: 'cover', backgroundPosition: 'center'
-            }} />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-          {/* Delete button - hover */}
-          <button
-            onClick={e => { e.stopPropagation(); handleDeleteBuilding(b); }}
-            className="absolute top-2 left-2 bg-red-500/90 hover:bg-red-600 text-white p-1.5 rounded-lg shadow transition-all opacity-0 group-hover:opacity-100 z-10"
-            title="Xóa tòa nhà"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-          <div className="absolute top-2 right-2 bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded-lg shadow z-10">
-            HH {b.commission || '50%'}
-          </div>
-          <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md text-white text-xs font-semibold px-2 py-1 rounded-lg flex items-center gap-1">
-            <ImageIcon className="w-3 h-3" /> {b.Rooms?.length || 0}
-          </div>
-        </div>
-
-        {/* Info */}
-        <div className="p-3.5">
-          <div className="text-sm font-extrabold text-[#1A2350] truncate">{b.code}</div>
-          <div className="flex items-center gap-1 text-xs text-slate-500 mt-1 truncate">
-            <MapPin className="w-3 h-3 text-amber-500 shrink-0" /> {b.address}
-          </div>
-          {b.area && (
-            <div className="inline-flex items-center mt-1 mb-2 px-2 py-0.5 bg-amber-50 text-amber-700 text-[10px] font-semibold rounded-full border border-amber-200">
-              Quận {b.area}
-            </div>
-          )}
-          <div className="flex flex-wrap gap-1 mb-2">
-            {b.depositOne && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[9px] font-bold rounded">Cọc: {b.depositOne}</span>}
-            {b.contractDuration && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[9px] font-bold rounded">HĐ: {b.contractDuration}</span>}
-            {b.petAllowed && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[9px] font-bold rounded">Pet: {b.petAllowed}</span>}
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-[11px] text-slate-400">Phòng trống</div>
-              <div className="text-sm font-bold text-emerald-600">{availRooms.length} phòng</div>
-            </div>
-            <div className="text-right">
-              <div className="text-[11px] text-slate-400">Từ</div>
-              <div className="text-sm font-bold text-[#1A2350]">{priceStr}</div>
-            </div>
-          </div>
-        </div>
       </div>
     );
   };
@@ -542,7 +547,17 @@ export default function RoomsPage() {
         <div className="text-center py-16 text-slate-400">Đang tải dữ liệu...</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredBuildings.map(b => <BuildingCard key={b.id} b={b} />)}
+          {filteredBuildings.map(b => (
+            <BuildingCard 
+              key={b.id} 
+              b={b} 
+              isAdmin={isAdmin} 
+              isSelected={selectedIds.includes(b.id)}
+              onSelect={toggleSelect}
+              onClick={setSelectedBuilding}
+              onDelete={handleDeleteBuilding}
+            />
+          ))}
         </div>
       )}
 
