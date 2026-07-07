@@ -61,7 +61,11 @@ export default function RoomsPage() {
 
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showBulkEditHH, setShowBulkEditHH] = useState(false);
-  const [bulkHHValue, setBulkHHValue] = useState("50%");
+  const [bulkHHValue, setBulkHHValue] = useState("");
+  const [bulkAreaValue, setBulkAreaValue] = useState("");
+  const [bulkDepositOne, setBulkDepositOne] = useState("");
+  const [bulkContract, setBulkContract] = useState("");
+  const [bulkPet, setBulkPet] = useState("");
 
   const isAdmin = currentUser?.role === 'admin';
 
@@ -191,11 +195,22 @@ export default function RoomsPage() {
 
   const handleBulkEditHH = async () => {
     if (!selectedIds.length) return;
+    
+    const updateData: any = {};
+    if (bulkHHValue.trim() !== '') updateData.commission = bulkHHValue;
+    if (bulkAreaValue.trim() !== '') updateData.area = bulkAreaValue;
+    if (bulkDepositOne.trim() !== '') updateData.depositOne = bulkDepositOne;
+    if (bulkContract.trim() !== '') updateData.contractDuration = bulkContract;
+    if (bulkPet.trim() !== '') updateData.petAllowed = bulkPet;
+
+    if (Object.keys(updateData).length === 0) return alert('Vui lòng nhập ít nhất 1 trường cần sửa!');
+
     try {
-      await axios.put(`${API_URL}/buildings/bulk-update`, { ids: selectedIds, updateData: { commission: bulkHHValue } });
-      setBuildings(buildings.map(b => selectedIds.includes(b.id) ? { ...b, commission: bulkHHValue } : b));
+      await axios.put(`${API_URL}/buildings/bulk-update`, { ids: selectedIds, updateData });
+      setBuildings(buildings.map(b => selectedIds.includes(b.id) ? { ...b, ...updateData } : b));
       setShowBulkEditHH(false);
       setSelectedIds([]);
+      setBulkHHValue(""); setBulkAreaValue(""); setBulkDepositOne(""); setBulkContract(""); setBulkPet("");
     } catch { alert('Lỗi cập nhật đồng loạt!'); }
   };
 
@@ -510,7 +525,7 @@ export default function RoomsPage() {
           <div className="text-sm font-semibold">Đã chọn {selectedIds.length} tòa</div>
           <div className="flex gap-2">
             <button onClick={() => setShowBulkEditHH(true)} className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-semibold transition-colors">
-              Sửa HH đồng loạt
+              Sửa đồng loạt
             </button>
             <button onClick={handleBulkDelete} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
               <Trash2 className="w-4 h-4" /> Xóa {selectedIds.length} tòa
@@ -840,13 +855,18 @@ export default function RoomsPage() {
         </Modal>
       )}
 
-      {/* ─── MODAL: SỬA ĐỒNG LOẠT HOA HỒNG ─── */}
+      {/* ─── MODAL: SỬA ĐỒNG LOẠT ─── */}
       {showBulkEditHH && (
-        <Modal title="Sửa Đồng Loạt Hoa Hồng" onClose={() => setShowBulkEditHH(false)}>
+        <Modal title="Sửa Thông Tin Đồng Loạt" onClose={() => setShowBulkEditHH(false)}>
           <div className="mb-4 text-sm text-slate-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
-            Bạn đang sửa thông tin Hoa Hồng cho <strong>{selectedIds.length}</strong> tòa nhà.
+            Bạn đang sửa thông tin cho <strong>{selectedIds.length}</strong> tòa nhà. <br/>
+            <span className="text-xs text-slate-500">Bỏ trống ô nào thì ô đó sẽ không bị thay đổi.</span>
           </div>
-          <InputField label="Mức Hoa Hồng Mới" value={bulkHHValue} onChange={setBulkHHValue} placeholder="VD: 50%" />
+          <InputField label="Khu vực / Quận" value={bulkAreaValue} onChange={setBulkAreaValue} placeholder="VD: Đống Đa" />
+          <InputField label="Mức Hoa Hồng" value={bulkHHValue} onChange={setBulkHHValue} placeholder="VD: 50%" />
+          <InputField label="Đóng 1 cọc 1 (Có/Không)" value={bulkDepositOne} onChange={setBulkDepositOne} placeholder="VD: Có" />
+          <InputField label="Hợp đồng bao lâu" value={bulkContract} onChange={setBulkContract} placeholder="VD: 6 tháng - 1 năm" />
+          <InputField label="Được nuôi pet không" value={bulkPet} onChange={setBulkPet} placeholder="VD: Có, cam kết giữ vệ sinh" />
           <div className="flex gap-3 mt-6">
             <button onClick={() => setShowBulkEditHH(false)} className="flex-1 px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm font-semibold hover:bg-slate-50 transition-colors">
               Hủy
