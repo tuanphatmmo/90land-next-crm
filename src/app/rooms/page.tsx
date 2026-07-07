@@ -1,6 +1,6 @@
 "use client";
 import { API_URL } from "@/lib/config";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Search, LayoutGrid, List, MapPin, Building, Image as ImageIcon, X, Plus, Trash2, Edit2, Eye, ExternalLink, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 import axios from "axios";
@@ -158,6 +158,12 @@ export default function RoomsPage() {
   const [bulkContract, setBulkContract] = useState("");
   const [bulkPet, setBulkPet] = useState("");
 
+  const [displayCount, setDisplayCount] = useState(24);
+
+  useEffect(() => {
+    setDisplayCount(24);
+  }, [search, filterArea, filterPrice]);
+
   const isAdmin = currentUser?.role === 'admin';
 
   // Image viewer
@@ -216,28 +222,34 @@ export default function RoomsPage() {
     }).catch(() => setLoading(false));
   }, []);
 
-  const filteredBuildings = buildings.filter(b => {
-    const matchSearch = search ? (b.address?.toLowerCase().includes(search.toLowerCase()) || b.code?.toLowerCase().includes(search.toLowerCase())) : true;
-    const matchArea = filterArea ? b.area?.toLowerCase().includes(filterArea.toLowerCase()) : true;
-    // Lọc theo mức giá (dựa vào giá thấp nhất của tòa)
-    let matchPrice = true;
-    if (filterPrice) {
-      const availRooms = b.Rooms?.filter((r: any) => r.status !== 'Đã thuê') || [];
-      if (availRooms.length === 0) { matchPrice = false; }
-      else {
-        const minP = Math.min(...availRooms.map((r: any) => r.price || 0));
-        if (filterPrice === 'lt3') matchPrice = minP > 0 && minP < 3_000_000;
-        else if (filterPrice === '3to5') matchPrice = minP >= 3_000_000 && minP <= 5_000_000;
-        else if (filterPrice === '5to8') matchPrice = minP > 5_000_000 && minP <= 8_000_000;
-        else if (filterPrice === '8to12') matchPrice = minP > 8_000_000 && minP <= 12_000_000;
-        else if (filterPrice === 'gt12') matchPrice = minP > 12_000_000;
+  const filteredBuildings = useMemo(() => {
+    return buildings.filter(b => {
+      const matchSearch = search ? (b.address?.toLowerCase().includes(search.toLowerCase()) || b.code?.toLowerCase().includes(search.toLowerCase())) : true;
+      const matchArea = filterArea ? b.area?.toLowerCase().includes(filterArea.toLowerCase()) : true;
+      let matchPrice = true;
+      if (filterPrice) {
+        const availRooms = b.Rooms?.filter((r: any) => r.status !== 'Đã thuê') || [];
+        if (availRooms.length === 0) { matchPrice = false; }
+        else {
+          const minP = Math.min(...availRooms.map((r: any) => r.price || 0));
+          if (filterPrice === 'lt3') matchPrice = minP > 0 && minP < 3_000_000;
+          else if (filterPrice === '3to5') matchPrice = minP >= 3_000_000 && minP <= 5_000_000;
+          else if (filterPrice === '5to8') matchPrice = minP > 5_000_000 && minP <= 8_000_000;
+          else if (filterPrice === '8to12') matchPrice = minP > 8_000_000 && minP <= 12_000_000;
+          else if (filterPrice === 'gt12') matchPrice = minP > 12_000_000;
+        }
       }
-    }
-    return matchSearch && matchArea && matchPrice;
-  });
+      return matchSearch && matchArea && matchPrice;
+    });
+  }, [buildings, search, filterArea, filterPrice]);
 
-  const totalRooms = filteredBuildings.reduce((sum, b) => sum + (b.Rooms?.filter((r: any) => r.status !== 'Đã thuê').length || 0), 0);
-  const areas = [...new Set(buildings.map(b => b.area).filter(Boolean))];
+  const totalRooms = useMemo(() => {
+    return filteredBuildings.reduce((sum, b) => sum + (b.Rooms?.filter((r: any) => r.status !== 'Đã thuê').length || 0), 0);
+  }, [filteredBuildings]);
+
+  const areas = useMemo(() => {
+    return [...new Set(buildings.map(b => b.area).filter(Boolean))];
+  }, [buildings]);
 
   /* ─── HANDLERS ─── */
   const handleAddBuilding = async () => {
@@ -546,19 +558,31 @@ export default function RoomsPage() {
       {loading ? (
         <div className="text-center py-16 text-slate-400">Đang tải dữ liệu...</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredBuildings.map(b => (
-            <BuildingCard 
-              key={b.id} 
-              b={b} 
-              isAdmin={isAdmin} 
-              isSelected={selectedIds.includes(b.id)}
-              onSelect={toggleSelect}
-              onClick={setSelectedBuilding}
-              onDelete={handleDeleteBuilding}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredBuildings.slice(0, displayCount).map(b => (
+              <BuildingCard 
+                key={b.id} 
+                b={b} 
+                isAdmin={isAdmin} 
+                isSelected={selectedIds.includes(b.id)}
+                onSelect={toggleSelect}
+                onClick={setSelectedBuilding}
+                onDelete={handleDeleteBuilding}
+              />
+            ))}
+          </div>
+          {displayCount < filteredBuildings.length && (
+            <div className="text-center mt-8 pb-4">
+              <button 
+                onClick={() => setDisplayCount(prev => prev + 24)} 
+                className="px-6 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold hover:bg-slate-50 transition-colors shadow-sm"
+              >
+                Hiển thị thêm... ({filteredBuildings.length - displayCount} tòa)
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {/* ─── BUILDING DETAIL MODAL ─── */}
