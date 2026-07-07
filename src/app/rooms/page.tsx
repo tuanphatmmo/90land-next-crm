@@ -81,6 +81,9 @@ export default function RoomsPage() {
   const [newBuildingArea, setNewBuildingArea] = useState("Hà Nội");
   const [newBuildingImage, setNewBuildingImage] = useState("");
   const [newBuildingCommission, setNewBuildingCommission] = useState("50%");
+  const [newBuildingDepositOne, setNewBuildingDepositOne] = useState("");
+  const [newBuildingContract, setNewBuildingContract] = useState("");
+  const [newBuildingPet, setNewBuildingPet] = useState("");
 
   // Add Room form
   const [newRoomNum, setNewRoomNum] = useState("");
@@ -104,6 +107,9 @@ export default function RoomsPage() {
   const [editBuildingArea, setEditBuildingArea] = useState("");
   const [editBuildingCommission, setEditBuildingCommission] = useState("");
   const [editBuildingImage, setEditBuildingImage] = useState("");
+  const [editBuildingDepositOne, setEditBuildingDepositOne] = useState("");
+  const [editBuildingContract, setEditBuildingContract] = useState("");
+  const [editBuildingPet, setEditBuildingPet] = useState("");
 
   useEffect(() => {
     const saved = localStorage.getItem("crm_user");
@@ -145,11 +151,13 @@ export default function RoomsPage() {
       const res = await axios.post(`${API_URL}/buildings`, {
         code: newBuildingCode, name: '', address: newBuildingAddress,
         area: newBuildingArea, source: 'manual',
-        commission: newBuildingCommission, image_link: newBuildingImage || ''
+        commission: newBuildingCommission, image_link: newBuildingImage || '',
+        depositOne: newBuildingDepositOne, contractDuration: newBuildingContract, petAllowed: newBuildingPet
       });
       setBuildings([...buildings, { ...res.data.data, Rooms: [] }]);
       setShowAddBuilding(false);
       setNewBuildingCode(''); setNewBuildingAddress(''); setNewBuildingImage('');
+      setNewBuildingDepositOne(''); setNewBuildingContract(''); setNewBuildingPet('');
     } catch { alert('Lỗi thêm tòa nhà!'); }
   };
 
@@ -240,9 +248,12 @@ export default function RoomsPage() {
         address: editBuildingAddress,
         area: editBuildingArea,
         commission: editBuildingCommission,
-        image_link: editBuildingImage
+        image_link: editBuildingImage,
+        depositOne: editBuildingDepositOne,
+        contractDuration: editBuildingContract,
+        petAllowed: editBuildingPet
       });
-      const updated = { ...selectedBuilding, address: editBuildingAddress, area: editBuildingArea, commission: editBuildingCommission, image_link: editBuildingImage };
+      const updated = { ...selectedBuilding, address: editBuildingAddress, area: editBuildingArea, commission: editBuildingCommission, image_link: editBuildingImage, depositOne: editBuildingDepositOne, contractDuration: editBuildingContract, petAllowed: editBuildingPet };
       setSelectedBuilding(updated);
       setBuildings(buildings.map(b => b.id === updated.id ? { ...b, ...updated } : b));
       setShowEditBuildingModal(false);
@@ -318,6 +329,11 @@ export default function RoomsPage() {
               Quận {b.area}
             </div>
           )}
+          <div className="flex flex-wrap gap-1 mb-2">
+            {b.depositOne && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[9px] font-bold rounded">Cọc: {b.depositOne}</span>}
+            {b.contractDuration && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[9px] font-bold rounded">HĐ: {b.contractDuration}</span>}
+            {b.petAllowed && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[9px] font-bold rounded">Pet: {b.petAllowed}</span>}
+          </div>
           <div className="flex items-center justify-between">
             <div>
               <div className="text-[11px] text-slate-400">Phòng trống</div>
@@ -552,6 +568,9 @@ export default function RoomsPage() {
                         setEditBuildingArea(selectedBuilding.area || '');
                         setEditBuildingCommission(selectedBuilding.commission || '50%');
                         setEditBuildingImage(selectedBuilding.image_link || '');
+                        setEditBuildingDepositOne(selectedBuilding.depositOne || '');
+                        setEditBuildingContract(selectedBuilding.contractDuration || '');
+                        setEditBuildingPet(selectedBuilding.petAllowed || '');
                         setShowEditBuildingModal(true);
                       }}
                       className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors"
@@ -595,8 +614,11 @@ export default function RoomsPage() {
           <InputField label="Mã Tòa *" value={newBuildingCode} onChange={setNewBuildingCode} placeholder="VD: MT999" />
           <InputField label="Địa chỉ *" value={newBuildingAddress} onChange={setNewBuildingAddress} placeholder="VD: Số 10 Ngõ 5 Láng Hạ" />
           <InputField label="Khu vực" value={newBuildingArea} onChange={setNewBuildingArea} placeholder="VD: Đống Đa, Hà Nội" />
-          <InputField label="Link ảnh Google Drive (Tùy chọn)" value={newBuildingImage} onChange={setNewBuildingImage} placeholder="https://drive.google.com/..." />
           <InputField label="Hoa hồng" value={newBuildingCommission} onChange={setNewBuildingCommission} placeholder="VD: 50%" />
+          <InputField label="Đóng 1 cọc 1 (Có/Không)" value={newBuildingDepositOne} onChange={setNewBuildingDepositOne} placeholder="VD: Có" />
+          <InputField label="Hợp đồng bao lâu" value={newBuildingContract} onChange={setNewBuildingContract} placeholder="VD: 6 tháng - 1 năm" />
+          <InputField label="Được nuôi pet không" value={newBuildingPet} onChange={setNewBuildingPet} placeholder="VD: Có, cam kết giữ vệ sinh" />
+          <InputField label="Link ảnh Google Drive (Tùy chọn)" value={newBuildingImage} onChange={setNewBuildingImage} placeholder="https://drive.google.com/..." />
           <div className="flex gap-3 mt-6">
             <button onClick={() => setShowAddBuilding(false)} className="flex-1 px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm font-semibold hover:bg-slate-50 transition-colors">
               Hủy
@@ -746,6 +768,9 @@ export default function RoomsPage() {
                 { icon: '🏠', label: 'Loại phòng', value: viewRoomDetail.type || 'Phòng thường' },
                 { icon: '📐', label: 'Diện tích', value: viewRoomDetail.area_m2 || '---' },
                 { icon: '🏢', label: 'Hoa hồng', value: selectedBuilding?.commission || '---' },
+                { icon: '💰', label: 'Đóng 1 cọc 1', value: selectedBuilding?.depositOne || 'Chưa có thông tin' },
+                { icon: '📝', label: 'Hợp đồng', value: selectedBuilding?.contractDuration || 'Chưa có thông tin' },
+                { icon: '🐕', label: 'Thú cưng (Pet)', value: selectedBuilding?.petAllowed || 'Chưa có thông tin' },
                 { icon: '🛋️', label: 'Nội thất', value: viewRoomDetail.furniture || 'Không có thông tin' },
                 { icon: '⚡', label: 'Dịch vụ', value: viewRoomDetail.services || 'Không có thông tin' },
               ].map(({ icon, label, value }) => (
@@ -800,6 +825,9 @@ export default function RoomsPage() {
           <InputField label="Địa chỉ" value={editBuildingAddress} onChange={setEditBuildingAddress} placeholder="VD: Số 10 Ngõ 5 Láng Hạ" />
           <InputField label="🗺️ Quận / Khu vực" value={editBuildingArea} onChange={setEditBuildingArea} placeholder="VD: Đống Đa, Hai Bà Trưng..." />
           <InputField label="Hoa hồng" value={editBuildingCommission} onChange={setEditBuildingCommission} placeholder="VD: 50%" />
+          <InputField label="Đóng 1 cọc 1 (Có/Không)" value={editBuildingDepositOne} onChange={setEditBuildingDepositOne} placeholder="VD: Có" />
+          <InputField label="Hợp đồng bao lâu" value={editBuildingContract} onChange={setEditBuildingContract} placeholder="VD: 6 tháng - 1 năm" />
+          <InputField label="Được nuôi pet không" value={editBuildingPet} onChange={setEditBuildingPet} placeholder="VD: Có, cam kết giữ vệ sinh" />
           <InputField label="Link ảnh Google Drive" value={editBuildingImage} onChange={setEditBuildingImage} placeholder="https://drive.google.com/..." />
           <div className="flex gap-3 mt-6">
             <button onClick={() => setShowEditBuildingModal(false)} className="flex-1 px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm font-semibold hover:bg-slate-50 transition-colors">

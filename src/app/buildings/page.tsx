@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { API_URL } from "@/lib/config";
 import { useState, useEffect } from "react";
 import { Building2, Plus, Search, Edit3, Trash2, MapPin, Tag, TrendingUp, Filter } from "lucide-react";
@@ -70,6 +70,7 @@ export default function BuildingsPage() {
                 <th className="px-6 py-4">Địa chỉ</th>
                 <th className="px-6 py-4 text-center">Số phòng</th>
                 <th className="px-6 py-4">Hoa hồng</th>
+                <th className="px-6 py-4">Thông tin khác (Cọc/HĐ/Pet)</th>
                 <th className="px-6 py-4">Độ ưu tiên</th>
                 <th className="px-6 py-4 text-right">Thao tác</th>
               </tr>
@@ -108,6 +109,14 @@ export default function BuildingsPage() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-1.5 font-bold text-amber-600">
                         <TrendingUp className="w-4 h-4" /> {b.commission || '50%'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-1 text-[11px] text-slate-500">
+                        {b.depositOne && <div><strong className="text-slate-700">Cọc:</strong> {b.depositOne}</div>}
+                        {b.contractDuration && <div><strong className="text-slate-700">HĐ:</strong> {b.contractDuration}</div>}
+                        {b.petAllowed && <div><strong className="text-slate-700">Pet:</strong> {b.petAllowed}</div>}
+                        {!b.depositOne && !b.contractDuration && !b.petAllowed && <span>---</span>}
                       </div>
                     </td>
                     <td className="px-6 py-4">
