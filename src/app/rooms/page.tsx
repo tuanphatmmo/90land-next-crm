@@ -403,11 +403,6 @@ export default function RoomsPage() {
       setBuildings(buildings.map(b => b.id === updated.id ? { ...b, ...updated } : b));
       setShowEditBuildingModal(false);
     } catch { alert('Lỗi cập nhật tòa nhà!'); }
-  };
-      </div>
-    );
-  };
-
   /* ─── ROOM ROW ─── */
   const RoomRow = ({ room }: { room: any }) => {
     const statusColor =
